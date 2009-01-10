@@ -75,7 +75,10 @@ class GroupingController < ContentController
   def render_articles
     respond_to do |format|
       format.html do
-        return error("Can't find any articles for '#{params[:id]}'") if @articles.empty?
+        if @articles.empty?
+          redirect_to this_blog.base_url, :status => 301
+          return
+        end
 
         render :template => 'articles/index' unless template_exists?
       end

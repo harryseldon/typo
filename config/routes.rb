@@ -41,17 +41,14 @@ end
 ActionController::Routing::Routes.draw do |map|
 
   # default
-  map.index '', :controller  => 'articles', :action => 'index'
+  map.root :controller  => 'articles', :action => 'index'
   map.admin 'admin', :controller  => 'admin/dashboard', :action => 'index'
 
   # make rss feed urls pretty and let them end in .xml
   # this improves caches_page because now apache and webrick will send out the
   # cached feeds with the correct xml mime type.
 
-  map.xml 'articles.rss', 
-  :controller => 'articles', :action => 'index', :format => 'rss'
-  map.xml 'articles.atom', 
-  :controller => 'articles', :action => 'index', :format => 'atom'
+  map.xml 'articles.:format', :controller => 'articles', :action => 'index', :format => /rss|atom/
   map.xml 'xml/itunes/feed.xml', :controller => 'xml', :action => 'itunes'
   map.xml 'xml/articlerss/:id/feed.xml', :controller => 'xml', :action => 'articlerss'
   map.xml 'xml/commentrss/feed.xml', :controller => 'xml', :action => 'commentrss'
@@ -97,7 +94,9 @@ ActionController::Routing::Routes.draw do |map|
   
   map.inflected_resource(:tags, :path_prefix => '')
   map.connect '/tag/:id/page/:page',
-  :controller => 'tags', :action => 'show'
+    :controller => 'tags', :action => 'show'
+  map.connect '/tags/page/:page', 
+    :controller => 'tags', :action => 'index'
   
   map.resources(:feedback)
 
@@ -106,7 +105,7 @@ ActionController::Routing::Routes.draw do |map|
     :controller => 'articles', :action => 'index',
     :page => /\d+/
 
-  date_options = { :year => /\d{4}/, :month => /(?:0?[1-9]|1[12])/, :day => /(?:0[1-9]|[12]\d|3[01])/ }
+  date_options = { :year => /\d{4}/, :month => /(?:0?[1-9]|1[012])/, :day => /(?:0[1-9]|[12]\d|3[01])/ }
 
   map.with_options(:conditions => {:method => :get}) do |get|
     get.with_options(date_options.merge(:controller => 'articles')) do |dated|

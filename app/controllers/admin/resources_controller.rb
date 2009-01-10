@@ -1,12 +1,19 @@
 class Admin::ResourcesController < Admin::BaseController
   upload_status_for :file_upload, :status => :upload_status
 
+  cache_sweeper :blog_sweeper
+  
   def upload
     begin
       case request.method
         when :post
           file = params[:upload][:filename]
-          @up = Resource.create(:filename => file.original_filename, :mime => file.content_type.chomp, :created_at => Time.now)
+          unless file.content_type
+            mime = 'text/plain'
+          else
+            mime = file.content_type.chomp
+          end
+          @up = Resource.create(:filename => file.original_filename, :mime => mime, :created_at => Time.now)
 
           @up.write_to_disk(file)
 

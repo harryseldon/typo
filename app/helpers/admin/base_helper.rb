@@ -43,7 +43,7 @@ module Admin::BaseHelper
   end
   
   def link_to_edit_with_profiles(label, record, controller = @controller.controller_name)
-    if current_user.profile.label == 'admin' || current_user.id == record.user_id
+    if current_user.admin? || current_user.id == record.user_id
       link_to label, :controller => controller, :action => 'edit', :id => record.id 
     end
   end
@@ -54,7 +54,7 @@ module Admin::BaseHelper
   end
 
   def link_to_destroy_with_profiles(record, controller = @controller.controller_name)
-    if current_user.profile.label == 'admin' || current_user.id == record.user_id
+    if current_user.admin? || current_user.id == record.user_id
       link_to(_("delete"), 
         { :controller => controller, :action => 'destroy', :id => record.id }, :confirm => _("Are you sure?"), :method => :post, :title => _("Delete content"))
       end
@@ -127,7 +127,7 @@ module Admin::BaseHelper
   end
 
   def t_textarea(object_name, method, options)
-    if this_blog.editor == 2
+    if current_user.editor == 2
       fckeditor_textarea(object_name, method, options)
     else
       text_area(object_name, method, options)
@@ -170,6 +170,31 @@ module Admin::BaseHelper
   
   def link_to_published(item)
     item.published? ? link_to_permalink(item, _("published")) : _("unpublished")
+  end
+  
+  def macro_help_popup(macro, text)
+    unless current_user.editor == 2
+      "<a href=\"#{url_for :controller => 'textfilters', :action => 'macro_help', :id => macro.short_name}\" onclick=\"return popup(this, 'Typo Macro Help')\">#{text}</a>"
+    end    
+  end
+  
+  def render_macros(macros)
+    result = link_to_function _("Show help on Typo macros") + " (+/-)",update_page { |page| page.visual_effect(:toggle_blind, "macros", :duration => 0.2) }
+    result << "<table id='macros' style='display: none;'>"
+    result << "<tr>"
+    result << "<th>#{_('Name')}</th>"
+    result << "<th>#{_('Description')}</th>"
+    result << "<th>#{_('Tag')}</th>"
+    result << "</tr>"
+    
+    for macro in macros.sort_by { |f| f.short_name }
+      result << "<tr #{alternate_class}>"
+      result << "<td>#{macro_help_popup macro, macro.display_name}</td>"
+      result << "<td>#{h macro.description}</td>"
+      result << "<td><code>&lt;typo:#{h macro.short_name}gt;</code></td>"
+      result << "</tr>"
+    end
+    result << "</table>"
   end
   
 end

@@ -48,6 +48,7 @@ describe "All Requests", :shared => true do
 
     Comment.stub!(:find).and_return(@comment)
     Blog.stub!(:find).and_return(@blog)
+    Blog.stub!(:default).and_return(@blog)
   end
 end
 
@@ -181,9 +182,9 @@ describe CommentsController, 'GET /comments' do
   end
 
   it "should not bother fetching any comments " do
-    mock_comments = mock('comments')
-    @the_mock.should_not_receive(:published_comments)
-    @the_mock.should_not_receive(:rss_limit_params)
+    mock_comment = mock(Comment)
+    mock_comment.should_not_receive(:published_comments)
+    mock_comment.should_not_receive(:rss_limit_params)
 
     get 'index'
   end

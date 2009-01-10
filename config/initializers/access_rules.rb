@@ -46,6 +46,7 @@ AccessControl.map :require => [ :admin, :publisher, :contributor ]  do |map|
   map.permission "admin/base"
   map.permission "admin/cache"
   map.permission "admin/dashboard"
+  map.permission "admin/textfilters"
 
   map.project_module :write, nil do |project|
     project.menu    "Write",            { :controller => "admin/content",    :action => "new" }
@@ -82,6 +83,7 @@ AccessControl.map :require => [ :admin, :publisher, :contributor ]  do |map|
     project.menu    "Design",                { :controller => "admin/themes", :action => "index"  }
     project.submenu "Theme editor",          { :controller => "admin/themes", :action => "editor" }
     project.submenu "Sidebar",               { :controller => "admin/sidebar", :action => "index" }
+    project.submenu "Theme catalogue",       { :controller => "admin/themes", :action => "catalogue" }
   end
   
   map.project_module :settings, nil do |project|
@@ -91,7 +93,6 @@ AccessControl.map :require => [ :admin, :publisher, :contributor ]  do |map|
     project.submenu "Read",                  { :controller => "admin/settings", :action => "read" }
     project.submenu "Feedback",              { :controller => "admin/settings", :action => "feedback" }			
     project.submenu "SEO",                   { :controller => "admin/settings", :action => "seo" }
-    project.submenu "Text Filters",          { :controller => "admin/textfilters", :action => "index" }
     project.submenu "Blacklist",             { :controller => "admin/blacklist", :action => "index" }
   end  
   

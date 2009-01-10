@@ -5,6 +5,7 @@ describe 'A successfully authenticated login' do
 
   before(:each) do
     @user = mock_model(User, :new_record? => false, :reload => @user)
+    @user.stub!(:profile).and_return(Profile.find_by_label('admin'))
     User.stub!(:authenticate).and_return(@user)
     User.stub!(:count).and_return(1)
     controller.stub!(:this_blog).and_return(Blog.default)
@@ -18,6 +19,11 @@ describe 'A successfully authenticated login' do
     User.should_receive(:authenticate).and_return(@user)
     make_request
     request.session[:user_id].should == @user.id
+  end
+
+  it 'sets typo_user_profile cookie' do
+    make_request
+    cookies[:typo_user_profile].should == ['admin']
   end
 
   it 'redirects to /bogus/location' do
@@ -55,9 +61,9 @@ describe 'Login gets the wrong password' do
     assigns[:login].should == 'bob'
   end
 
-  it 'cookies[:is_admin] should be blank' do
+  it 'typo_user_profile cookie should be blank' do
     make_request
-    response.cookies[:is_admin].should be_blank
+    cookies[:typo_user_profile].should be_blank
   end
 
   it 'should render login action' do
@@ -179,27 +185,34 @@ describe 'User is logged in' do
   before(:each) do
     @user = mock_model(User)
 
+    # The AccountsController class uses session[:user_id], and the
+    # Typo LoginSystem uses session[:user].  So we need to set both of
+    # these up correctly.  I'm not sure why the duplication exists.
     session[:user_id] = @user.id
+    @controller.send(:current_user=, @user)
+
     User.should_receive(:find) \
-      .with(@user.id) \
+      .with(:first, :conditions => { :id => @user.id }) \
       .any_number_of_times \
       .and_return(@user)
+    @user.should_receive(:forget_me)
 
-    request.cookies[:is_admin] = 'yes'
+    cookies[:typo_user_profile] = 'admin'
   end
 
   it 'logging out deletes the session[:user_id]' do
     get 'logout'
-    session[:user_id].should == nil
+    session[:user_id].should be_blank
   end
 
-  it 'renders the logout action' do
+  it 'redirects to the login action' do
     get 'logout'
-    response.should render_template('logout')
+    response.should redirect_to(:action => 'login')
   end
 
-  it 'logging out deletes the "is_admin" cookie' do
+  it 'logging out deletes cookies containing credentials' do
     get 'logout'
-    response.cookies[:is_admin].should be_blank
+    cookies[:auth_token].should == []
+    cookies[:typo_user_profile].should == []
   end
 end

@@ -28,6 +28,20 @@ describe Admin::ContentController do
       response.should be_success
     end
 
+    it 'should restrict only by searchstring' do
+      get :index, :search => {:searchstring => 'originally'}
+      assigns(:articles).should == [contents(:xmltest)]
+      response.should render_template('index')
+      response.should be_success
+    end
+
+    it 'should restrict by searchstring and published_at' do
+      get :index, :search => {:searchstring => 'originally', :published_at => '2008-08'}
+      assigns(:articles).should be_empty
+      response.should render_template('index')
+      response.should be_success
+    end
+
   end
 
   describe 'show action', :shared => true do
@@ -187,6 +201,8 @@ describe Admin::ContentController do
         response.should render_template('new')
         assert_template_has 'article'
         assigns(:article).should be_valid
+        response.should have_text(/body/)
+        response.should have_text(/extended content/)
       end
 
       it 'should update article by edit action' do
@@ -211,8 +227,17 @@ describe Admin::ContentController do
         end
       end
 
+      it 'should allow updating body_and_extended' do
+        article = contents(:article1)
+        post :edit, 'id' => article.id, 'article' => {
+          'body_and_extended' => 'foo<!--more-->bar<!--more-->baz'
+        }
+        assert_response :redirect
+        article.reload
+        article.body.should == 'foo'
+        article.extended.should == 'bar<!--more-->baz'
+      end
     end
-
 
     describe 'resource_add action' do
 

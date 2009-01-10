@@ -46,6 +46,9 @@ class Article < Content
 
   has_and_belongs_to_many :tags, :foreign_key => 'article_id'
 
+  named_scope :category, lambda {|category_id| {:conditions => ['categorizations.category_id = ?', category_id], :include => 'categorizations'}}
+
+
   belongs_to :user
 
   has_many :triggers, :as => :pending_item
@@ -74,6 +77,19 @@ class Article < Content
     def count_published_articles
       count(:conditions => { :published => true })
     end
+
+    def search_no_draft_paginate(search_hash, paginate_hash)
+      list_function  = ["Article.no_draft"] + function_search_no_draft(search_hash)
+
+      if search_hash[:category] and search_hash[:category].to_i > 0
+        list_function << 'category(search_hash[:category])'
+      end
+
+      paginate_hash[:order] = 'created_at DESC'
+      list_function << "paginate(paginate_hash)"
+      eval(list_function.join('.'))
+    end
+
   end
 
   accents = { ['á','à','â','ä','ã','Ã','Ä','Â','À'] => 'a',
@@ -261,11 +277,12 @@ class Article < Content
   end
 
   # Fulltext searches the body of published articles
-  def self.search(query)
-    if !query.to_s.strip.empty?
-      tokens = query.split.collect {|c| "%#{c.downcase}%"}
-      find_published(:all,
-                     :conditions => [(["(LOWER(body) LIKE ? OR LOWER(extended) LIKE ? OR LOWER(title) LIKE ?)"] * tokens.size).join(" AND "), *tokens.collect { |token| [token] * 3 }.flatten])
+  def self.search(query, args={})
+    query_s = query.to_s.strip
+    if !query_s.empty? && args.empty?
+      Article.searchstring(query)
+    elsif !query_s.empty? && !args.empty?
+      Article.searchstring(query).paginate(args)
     else
       []
     end
@@ -296,6 +313,7 @@ class Article < Content
     !(allow_comments? && in_feedback_window?)
   end
 
+  # check if time to comment is open or not
   def in_feedback_window?
     self.blog.sp_article_auto_close.zero? ||
       self.created_at.to_i > self.blog.sp_article_auto_close.days.ago.to_i
@@ -367,6 +385,25 @@ class Article < Content
     [:body, :extended]
   end
 
+  # The web interface no longer distinguishes between separate "body" and
+  # "extended" fields, and instead edits everything in a single edit field,
+  # separating the extended content using "<!--more-->".
+  def body_and_extended
+    if extended.nil? || extended.empty?
+      body
+    else
+      body + "\n<!--more-->\n" + extended
+    end
+  end
+
+  # Split apart value around a "<!--more-->" comment and assign it to our
+  # #body and #extended fields.
+  def body_and_extended= value
+    parts = value.split(/\n?<!--more-->\n?/, 2)
+    self.body = parts[0]
+    self.extended = parts[1] || ''
+  end
+
   ## Feed Stuff
   def rss_trackback(xml)
     return unless allow_pings?
@@ -429,12 +466,21 @@ class Article < Content
   end
 
   def atom_content(xml)
+    if self.user && self.user.name
+      rss_desc = "<hr /><p><small>#{_('Original article writen by')} #{self.user.name} #{_('and published on')} <a href='#{blog.base_url}'>#{blog.blog_name}</a> | <a href='#{self.permalink_url}'>#{_('direct link to this article')}</a> | #{_('If you are reading this article elsewhere than')} <a href='#{blog.base_url}'>#{blog.blog_name}</a>, #{_('it has been illegally reproduced and without proper authorization')}.</small></p>"
+    else
+      rss_desc = ""
+    end
+
+    post = html(blog.show_extended_on_rss ? :all : :body)
+    content = blog.rss_description ? post + rss_desc : post
+
     xml.summary "type" => "xhtml" do
       xml.div(:xmlns => "http://www.w3.org/1999/xhtml") {xml << html(:body) }
     end
     if blog.show_extended_on_rss
       xml.content(:type => "xhtml") do
-        xml.div(:xmlns => 'http://www.w3.org/1999/xhtml') { xml << html(:all) }
+        xml.div(:xmlns => 'http://www.w3.org/1999/xhtml') { xml << content }
       end
     end
   end
@@ -448,7 +494,7 @@ class Article < Content
   end
 
   def access_by?(user) 
-    user.profile.label == 'admin' || user_id == user.id 
+    user.admin? || user_id == user.id 
   end
 
   protected

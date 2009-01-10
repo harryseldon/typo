@@ -63,8 +63,9 @@ class ArticlesController < ContentController
   end
 
   def search
-    @articles = this_blog.articles_matching(params[:q])
-    render_paginated_index("No articles found...")
+    @articles = this_blog.articles_matching(params[:q], :page => params[:page], :per_page => @limit)
+    return error(on_empty, :status => 200) if @articles.empty?
+    render :action => 'search'
   end
 
   ### Deprecated Actions ###

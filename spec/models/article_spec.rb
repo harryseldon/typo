@@ -55,7 +55,7 @@ describe Article do
   def test_permalink
     assert_equal( contents(:article3), Article.find_by_date(2004,06,01) )
     assert_equal( [contents(:article2), contents(:article1)],
-                  Article.find_all_by_date(2.days.ago.year) )
+                  Article.find_all_by_date(2.days.ago.year) ) # not works the 2 January of each years \o/
   end
 
   def test_permalink_with_title
@@ -305,6 +305,58 @@ describe Article do
       contents(:article1).should be_access_by(users(:tobi))
     end
 
+  end
+
+  describe 'body_and_extended' do
+    before :each do 
+      @article = contents(:article1)
+    end
+
+    it 'should combine body and extended content' do
+      @article.body_and_extended.should ==
+        "#{@article.body}\n<!--more-->\n#{@article.extended}"
+    end
+
+    it 'should not insert <!--more--> tags if extended is empty' do
+      @article.extended = ''
+      @article.body_and_extended.should == @article.body
+    end
+  end
+
+  describe 'body_and_extended=' do
+    before :each do 
+      @article = contents(:article1)
+    end
+
+    it 'should split apart values at <!--more-->' do
+      @article.body_and_extended = 'foo<!--more-->bar'
+      @article.body.should == 'foo'
+      @article.extended.should == 'bar'
+    end
+    
+    it 'should remove newlines around <!--more-->' do
+      @article.body_and_extended = "foo\n<!--more-->\nbar"
+      @article.body.should == 'foo'
+      @article.extended.should == 'bar'
+    end
+
+    it 'should make extended empty if no <!--more--> tag' do
+      @article.body_and_extended = "foo"
+      @article.body.should == 'foo'
+      @article.extended.should be_empty
+    end
+
+    it 'should preserve extra <!--more--> tags' do
+      @article.body_and_extended = "foo<!--more-->bar<!--more-->baz"
+      @article.body.should == 'foo'
+      @article.extended.should == 'bar<!--more-->baz'
+    end
+
+    it 'should be settable via self.attributes=' do
+      @article.attributes = { :body_and_extended => 'foo<!--more-->bar' }
+      @article.body.should == 'foo'
+      @article.extended.should == 'bar'
+    end
   end
 
 end

@@ -1,5 +1,8 @@
 class Admin::FeedbackController < Admin::BaseController
 
+  cache_sweeper :blog_sweeper
+  before_filter :only_own_feedback, :only => [:delete]
+
   def index
     conditions = ['1 = 1', {}]
 
@@ -45,13 +48,13 @@ class Admin::FeedbackController < Admin::BaseController
   def delete
     if request.post?
       begin
-        Feedback.destroy(params[:id])
+        @feedback.destroy
         flash[:notice] = _("Deleted")
       rescue ActiveRecord::RecordNotFound
         flash[:notice] = _("Not found")
       end
     end
-    redirect_to :action => 'index', :page => params[:page], :search => params[:search]
+    redirect_to :action => 'article', :id => @feedback.article.id
   end
 
   def create
@@ -146,6 +149,15 @@ class Admin::FeedbackController < Admin::BaseController
     @unexpired = false
     PageCache.sweep_all
     expire_fragment(/.*/)
+  end
+
+  def only_own_feedback
+    @feedback = Feedback.find(params[:id])
+    unless @feedback.article.user_id == current_user.id
+      unless current_user.admin?
+        redirect_to :controller => 'admin/feedback', :action => :index
+      end
+    end
   end
 
 end

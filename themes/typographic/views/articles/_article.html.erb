@@ -6,14 +6,14 @@
     </div>
   </div>
   <div class="content">
-    <%= article.html(:body) %>
+    <%= simple_format article.html(:body) %>
 
     <% if article.extended? -%>
       <div class="extended">
         <% if controller.action_name == 'index' -%>
           <p><%= link_to_permalink article,_("Continue reading...") %></p>
         <% else -%>
-          <%= article.html(:extended) %>
+          <%= simple_format article.html(:extended) %>
         <% end -%>
       </div>
     <% end -%>  
@@ -24,7 +24,7 @@
       <%= _("This entry was posted on %s", content_tag(:abbr, js_distance_of_time_in_words_to_now(@article.published_at), {:class => 'published', :title => @article.published_at.xmlschema})) %>
       <%= _("and %s", category_links(@article)) unless @article.categories.empty? %>. 
       <%= _("You can follow any any response to this entry through the %s", link_to(_("Atom feed"), @auto_discovery_url_atom)) %>. 
-      <%= _("You can leave a %s", link_to_permalink(article, _('comment'), 'comments')) if @article.allow_comments? %> 
+      <%= _("You can leave a %s", link_to_permalink(article, _('comment'), 'comments')) unless @article.comments_closed? %> 
       <%= _("or a %s from your own site", link_to_permalink(@article, _('trackback'), 'trackbacks')) if @article.allow_pings? %>.
     </small></p>
     <p class="tags">

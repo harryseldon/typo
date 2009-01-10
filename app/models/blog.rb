@@ -17,6 +17,7 @@ end
 # matches the base_url computed for each request.
 class Blog < CachedModel
   include ConfigManager
+  extend ActiveSupport::Memoizable
 
   validate_on_create { |blog|
     unless Blog.count.zero?
@@ -100,6 +101,9 @@ class Blog < CachedModel
   # The default Blog.  This is the lowest-numbered blog, almost always id==1.
   def self.default
     find(:first, :order => 'id')
+  rescue
+    logger.warn 'You have not Blog install.'
+    nil
   end
 
   def ping_article!(settings)
@@ -125,8 +129,9 @@ class Blog < CachedModel
 
   # The +Theme+ object for the current theme.
   def current_theme
-    @cached_theme ||= Theme.find(theme)
+    Theme.find(theme)
   end
+  memoize :current_theme
 
   # Generate a URL based on the +base_url+.  This allows us to generate URLs
   # without needing a controller handy, so we can produce URLs from within models
@@ -207,8 +212,8 @@ class Blog < CachedModel
     Article.find_all_by_date(*params.values_at(:year, :month, :day))
   end
 
-  def articles_matching(query)
-    Article.search(query)
+  def articles_matching(query, args={})
+    Article.search(query, args)
   end
 
   def rss_limit_params
