@@ -173,3 +173,13 @@ FLICKR_KEY='84f652422f05b96b29b9a960e0081c50'
 require 'cached_model'
 CachedModel.use_local_cache = true
 CachedModel.use_memcache = false
+
+unless '1.9'.respond_to?(:force_encoding)
+  String.class_eval do
+    begin
+      remove_method :chars
+    rescue NameError
+      # OK
+    end
+  end
+end 
