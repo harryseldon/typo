@@ -1,3 +1,7 @@
 config/database.yml
 config/mail.yml
 *.log
+.loadpath
+.project
+*.*~
+*~
